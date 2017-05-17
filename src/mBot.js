@@ -16,13 +16,130 @@ const mBot = Object.setPrototypeOf({
     // Facebook Page Access Token
     pageToken: null,
     /*
-    *
-    * Handle payload data
-    * @param {array} payload - payload received from facebook messenger
-    *
-    * */
+     *
+     * Handle incoming data from messenger platform
+     * @param {object} payload - data from facebook messenger platform
+     *
+     * */
     handlePayload: async function handlePayload(payload) {
-        console.log('GOT: ', payload);
+
+        let store = {};
+
+        // process entry arrays
+        await payload.map(entry => {
+            store.id = entry.id;
+            store.time = entry.time;
+
+            // process message array
+            entry.messaging.map(event => {
+
+                // store shared info
+                store.senderId = event.sender.id;
+                store.recipientId = event.recipient.id;
+                store.timestamp = event.timestamp;
+
+                // check for referral
+                if (event.referral) {
+                    store.referral = event.referral;
+                }
+
+                // check for postback events
+                else if (event.postback) {
+                    store.postback = event.postback.payload;
+                }
+
+                else {
+                    store.mid = event.message.mid;
+                    store.seq = event.message.seq;
+
+                    // check for quick reply
+                    if (event.message.quick_reply) {
+                        store.quickReply = event.message.quick_reply;
+                    }
+
+                    // check for text message
+                    if (event.message.text) {
+                        store.text = event.message.text;
+                    }
+
+                    // check for attachments
+                    else if (event.message.attachments) {
+
+                        let attachment = event.message.attachments[0];
+
+                        // check for sticker
+                        if (event.message.sticker_id) {
+                            store.stickerId = event.message.sticker_id;
+                            store.stickerUrl = attachment.payload.url;
+                        }
+
+                        // check for image
+                        else if (attachment.type === 'image') {
+                            store.image = attachment.payload;
+                        }
+
+                        // check for audio
+                        else if (attachment.type === 'audio') {
+                            store.audio = attachment.payload
+                        }
+
+                        // check for video
+                        else if (attachment.type === 'video') {
+                            store.video = attachment.payload;
+                        }
+
+                        // check for location
+                        else if (attachment.type === 'location') {
+                            store.location = attachment.payload;
+                        }
+
+                    }
+
+                }
+
+            });
+        });
+
+        // event emitter function based on stored data
+        (data => {
+
+            if (data.referral) {
+                mBot.emit('referral', data);
+            }
+
+            else if (data.postback) {
+                mBot.emit('postback', data);
+            }
+
+            else if (data.quickReply) {
+                mBot.emit('quickReply', data);
+            }
+
+            else if (data.text) {
+                mBot.emit('text', data);
+            }
+
+            else if (data.stickerId) {
+                mBot.emit('sticker', data);
+            }
+
+            else if (data.image) {
+                mBot.emit('image', data);
+            }
+
+            else if (data.audio) {
+                mBot.emit('audio', data);
+            }
+
+            else if (data.video) {
+                mBot.emit('video', data);
+            }
+
+            else if (data.location) {
+                mBot.emit('location', data);
+            }
+
+        })(store);
     },
     /*
      * KOA Middleware
@@ -66,7 +183,6 @@ const mBot = Object.setPrototypeOf({
         return async function mBotKoa(ctx, next) {
 
             if (ctx.path === url && ctx.method === 'GET') {
-                //console.log('AKI', this.verifyToken);
                 if (ctx.query['hub.verify_token'] === token.verify) {
                     ctx.type = 'text/plain; charset=utf-8';
                     ctx.body = ctx.query['hub.challenge'];
