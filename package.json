@@ -2,20 +2,25 @@
   "name": "mbot",
   "version": "0.0.0",
   "description": "facebook messenger nodejs library",
-  "main": "src/index.js",
+  "main": "src/mBot.js",
   "scripts": {
     "unit": "NODE_ENV=testing PORT=8443 nyc ava --verbose",
     "watch:unit": "NODE_ENV=testing PORT=8443 ava --watch --verbose",
     "report": "nyc report --reporter=html",
-    "dev": "NODE_ENV=development PORT=8443 ava --watch --verbose"
+    "dev": "NODE_ENV=development PORT=8443 nodemon index"
   },
   "author": "Felipe L. S. Guzmán <contacto@lgsus.online>",
   "license": "MIT",
   "dependencies": {
+    "dotenv": "^4.0.0",
+    "koa": "^2.2.0",
+    "koa-bodyparser": "^4.2.0",
+    "nodemon": "^1.11.0"
   },
   "devDependencies": {
     "ava": "^0.19.1",
     "nyc": "^10.3.2",
+    "supertest": "^3.0.0",
     "unit.js": "^2.0.0"
   },
   "ava": {
