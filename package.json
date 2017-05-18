@@ -1,7 +1,7 @@
 {
-  "name": "mbot",
+  "name": "mbot-nodejs",
   "version": "0.0.0",
-  "description": "facebook messenger nodejs library",
+  "description": "NodeJS library to build chatbots for Facebook Messenger",
   "main": "src/mBot.js",
   "scripts": {
     "unit": "NODE_ENV=testing PORT=8443 nyc ava --verbose",
@@ -10,7 +10,7 @@
     "dev": "NODE_ENV=development PORT=8443 nodemon index"
   },
   "author": "Felipe L. S. Guzmán <contacto@lgsus.online>",
-  "license": "MIT",
+  "license": "GNU GPLv3",
   "dependencies": {
     "dotenv": "^4.0.0",
     "koa": "^2.2.0",
