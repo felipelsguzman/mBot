@@ -1,7 +1,7 @@
 {
   "name": "mbot-nodejs",
-  "version": "0.0.0",
-  "description": "NodeJS library to build chatbots for Facebook Messenger",
+  "version": "1.0.0",
+  "description": "Build chatbots for Facebook Messenger on top of NodeJS",
   "main": "src/mBot.js",
   "scripts": {
     "unit": "NODE_ENV=testing PORT=8443 nyc ava --verbose",
@@ -15,7 +15,8 @@
     "dotenv": "^4.0.0",
     "koa": "^2.2.0",
     "koa-bodyparser": "^4.2.0",
-    "nodemon": "^1.11.0"
+    "nodemon": "^1.11.0",
+    "superagent": "^3.5.2"
   },
   "devDependencies": {
     "ava": "^0.19.1",
