@@ -9,6 +9,11 @@
     "report": "nyc report --reporter=html",
     "dev": "NODE_ENV=development PORT=8443 nodemon index"
   },
+  "repository" :
+    {
+      "type" : "git",
+      "url" : "https://github.com/lgsus-online/mBot.git"
+    },
   "author": "Felipe L. S. Guzmán <contacto@lgsus.online>",
   "license": "GNU GPLv3",
   "dependencies": {
