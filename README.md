@@ -41,9 +41,10 @@ server.use(bodyParser());
 
 // 3. Set mBot middleware with a configuration object as parameter. 
 server.use(mBot.koa({
-    apiVersion: 'v2.8',
+    apiVersion: 'v2.10',
     verifyToken: process.env.VERIFY_TOKEN,
-    pageToken: process.env.FB_PAGE_ACCESS_TOKEN
+    pageToken: process.env.FB_PAGE_ACCESS_TOKEN,
+    appSecret: process.env.APP_SECRET
 }));
 
 // 4. Use event listeners to get data from facebook messenger
@@ -57,7 +58,7 @@ Check mBot API documentation for more information about available events.
 ### Using the alternative way:
 If you are using other framework or none at all to write you application, you can use the **alternative way** in order to work with this library.
 
-First you need to run **mBot.init()** method with a configuration object as parameter in your main app file:
+First you need to run **mBot.init()** function with a configuration object as parameter in your main app file:
 
 #### Example
  
@@ -65,13 +66,13 @@ First you need to run **mBot.init()** method with a configuration object as para
 const mBot = require('mbot-nodejs);
 
 mBot.init({
-    apiVersion: 'v2.8',
+    apiVersion: 'v2.10',
     verifyToken: process.env.VERIFY_TOKEN,
     pageToken: process.env.FB_PAGE_ACCESS_TOKEN
 });
 ```
 
-Then use the **mBot.handlePayload()** method inside the route wich handle the post request from facebook messenger that contain the messenger data and pass the **payload** param to the method:
+Then use the **mBot.handlePayload()** function inside the route wich handle the post request from facebook messenger that contain the messenger data and pass the **payload** param to the function:
 
 The **payload** param correspond to the data in the **req.body.entry** object.
 
@@ -104,7 +105,7 @@ Check mBot API documentation for more information about available events.
 
 # mBot API
 ## mBot.koa({}): 
-Use this method to run mBot library as a **koajs middleware**
+Use this function to run mBot library as a **koajs middleware**
 
 Pass an object as parameter with messenger webhook configuration data:
 
@@ -113,6 +114,7 @@ Pass an object as parameter with messenger webhook configuration data:
     @param {string} apiVersion  - facebook graph api version
     @param {string} verifyToken - verifyToken for facebook app webhook configuration. 
     @param {string} pageToken   - facebook messenger page access token
+    @param {string} appSecret   - facebook application secret key
     
 Optional parameters:
 
@@ -129,12 +131,13 @@ server.use(mBot.koa({
     apiVersion: 'v2.8',
     verifyToken: process.env.VERIFY_TOKEN,
     pageToken: process.env.FB_PAGE_ACCESS_TOKEN,
-    endpoint: '/messenger-webhook'
+    endpoint: '/messenger-webhook',
+    appSecret: process.env.APP_SECRET
 }));
 ```
 
 ## mBot.init({}): 
-Use this method to run mBot as an alternative way to the koajs middlware style.
+Use this function to run mBot as an alternative way to the koajs middlware style.
 
 Pass an object as parameter with messenger webhook configuration data:
 
@@ -144,10 +147,6 @@ Pass an object as parameter with messenger webhook configuration data:
     @param {string} verifyToken - verifyToken for facebook app webhook configuration. 
     @param {string} pageToken   - facebook messenger page access token
     
-Optional parameters:
-
-    @param {string} endpoint - facebook webhook endpoint name - '/messenger' by default
-
 #### Example
 In your main app file:
     
@@ -155,16 +154,52 @@ In your main app file:
 mBot.init({
     apiVersion: 'v2.8',
     verifyToken: process.env.VERIFY_TOKEN,
-    pageToken: process.env.FB_PAGE_ACCESS_TOKEN,
-    endpoint: '/messenger-webhook'
+    pageToken: process.env.FB_PAGE_ACCESS_TOKEN
 });
 ```
 
-## mBot.handlePayload(payload):
-This method handle the incoming data (payload) from facebook messenger and emit different events depending on the received data.
-**If you are working with KoaJs you don't need to use this method directly**.
+## mBot.checkMessageSignature(): 
+Allow to check for valid signature on messages as basic security layer.
+Return true only if get a valid signature, otherwise will return undefined.
 
-Also this method work as an alternative way to use the library if you are **not** working with KoaJs.
+**If you are working with KoaJs you don't need to use this function directly as it's implemented as default.**
+
+***Required parameters*** :
+
+    @param {string} appSecret   - facebook application secret key
+    @param {string} xhsign      - header x-hub-signature
+    @param {string} body        - body request
+    
+#### Example
+In your route module: ``` ../route/messenger.js```
+    
+```
+const mBot = require('mbot-nodejs);
+let appSecret = process.env.APP_SECRET;
+let header = ctx.request.header;
+let xhsign = header['x-hub-signature'];
+let body = ctx.request.body;
+let payload = body.entry;
+
+mBot.checkMessageSignature(appSecret, xhsign, body)
+    .then(result => {
+        if (result) {
+            mBot.handlePayload(payload);
+            ctx.type = 'text/plain; charset=utf-8';
+            ctx.status = 200;
+        } else {
+            ctx.type = 'text/plain; charset=utf-8';
+            ctx.status = 401;
+        }
+    });
+```
+
+
+## mBot.handlePayload(payload):
+This function handle the incoming data (payload) from facebook messenger and emit different events depending on the received data.
+**If you are working with KoaJs you don't need to use this function directly**.
+
+Also this function work as an alternative way to use the library if you are **not** working with KoaJs.
 
 Check messenger webhook reference [here](https://developers.facebook.com/docs/messenger-platform/webhook-reference#subscribe)
 
@@ -186,7 +221,7 @@ post('/messenger', function (req, res) {
 ```
 
 #### Events
-This method will emit different events depending on the received data, valid events are:
+This function will emit different events depending on the received data, valid events are:
 - referral
 - postback
 - quickReply
@@ -258,7 +293,7 @@ or if you receive a text event then the object will looks like:
 # mBot Send API
 Allows you to work with messenger send API.
 
-All this methods are asynchronous functions.
+All this functions are asynchronous.
 
 Check messenger Send API reference [here](https://developers.facebook.com/docs/messenger-platform/send-api-reference)
  :
@@ -411,7 +446,7 @@ mBot.api.sendGenericTemplate({
 
 ## mBot.api.sendListTemplate({}):
 Send list template.
-You need to whitelist your URL first to work with this method. 
+You need to whitelist your URL first to work with this function. 
 
 ***Required parameters*** :
 
@@ -607,7 +642,7 @@ mBot.api.sendReceiptTemplate({
     address: address,
     summary: summary,
     adjustments: adjustments
-}).catch(error=>{console.log('METHOD mBot.api.sendReceiptTemplate() :' + error)});
+}).catch(error=>{console.log('FUNCTION mBot.api.sendReceiptTemplate() :' + error)});
 ```
 
 ## mBot.api.sendBoardingPassTemplate({}):
@@ -740,7 +775,7 @@ mBot.api.sendBoardingPassTemplate({
     introMessage: 'You are checked in.',
     locale: 'en_US',
     boardingPass: boardingPass
-}).catch(error=>{console.log('METHOD mBot.api.sendBoardingPassTemplate() :' + error)});
+}).catch(error=>{console.log('FUNCTION mBot.api.sendBoardingPassTemplate() :' + error)});
 ```
 
 ## mBot.api.sendCheckinTemplate({}):
@@ -787,7 +822,7 @@ mBot.api.sendCheckinTemplate({
     pnrNumber: 'ABCDEF',
     flightInfo: flightInfo,
     checkinUrl: 'https:\/\/www.airline.com\/check-in'
-}).catch(error=>{console.log('METHOD mBot.api.sendCheckinTemplate() :' + error)});
+}).catch(error=>{console.log('FUNCTION mBot.api.sendCheckinTemplate() :' + error)});
 ```
 
 ## mBot.api.sendItineraryTemplate({}):
@@ -940,7 +975,7 @@ mBot.api.sendItineraryTemplate({
     tax: 200,
     totalPrice: 14003,
     currency: 'USD'
-}).catch(error=>{console.log('METHOD mBot.api.sendItiniraryTemplate() :' + error)});
+}).catch(error=>{console.log('FUNCTION mBot.api.sendItiniraryTemplate() :' + error)});
 ```
 
 ## mBot.api.sendFlightUpdateTemplate({}):
@@ -985,7 +1020,7 @@ mBot.api.sendFlightUpdateTemplate({
     locale: 'en_US',
     pnrNumber: 'CF23G2',
     updateFlightInfo: updateFlightInfo
-}).catch(error=>{console.log('METHOD mBot.api.sendFlightUpdateTemplate() :' + error)});
+}).catch(error=>{console.log('FUNCTION mBot.api.sendFlightUpdateTemplate() :' + error)});
 ```
 
 ## mBot.api.sendQuickReplies({}):
@@ -1016,7 +1051,7 @@ mBot.api.sendQuickReplies({
     userId: process.env.TEST_FBID,
     text: 'Selecciona una opcion',
     quickReplies: quickReplies
-}).catch(error=>{console.log('METHOD mBot.api.sendQuickReplies() :' + error)});
+}).catch(error=>{console.log('FUNCTION mBot.api.sendQuickReplies() :' + error)});
 ```
 
 ## mBot.api.sendAction({}):
@@ -1032,7 +1067,7 @@ Send action.
 mBot.api.sendAction({
     userId: process.env.TEST_FBID,
     senderAction: 'typing_on'
-}).catch(error=>{console.log('METHOD mBot.api.sendAction() :' + error)});
+}).catch(error=>{console.log('FUNCTION mBot.api.sendAction() :' + error)});
 ```
 
 ## mBot.api.getUserProfile({}):
@@ -1047,7 +1082,7 @@ Get user profile information.
 mBot.on('text', async data => {
     await mBot.api.getUserProfile(data.senderId)
         .then(response=>{console.log('profile info: ', response)})
-        .catch(error=>{console.log('METHOD mBot.api.getUserProfile() :' + error)});
+        .catch(error=>{console.log('FUNCTION mBot.api.getUserProfile() :' + error)});
 });
 ```
 
@@ -1101,7 +1136,7 @@ let persistentMenu = [
 ];
 
 mBot.api.setPersistentMenu(persistentMenu)
-    .catch(error=>{console.log('METHOD mBot.api.setPersistentMenu() :' + error)});
+    .catch(error=>{console.log('FUNCTION mBot.api.setPersistentMenu() :' + error)});
 ```
 
 ## mBot.api.setStartButton({}):
@@ -1114,7 +1149,7 @@ Set start button.
 #### Example
 ```
 mBot.api.setStartButton('startButton')
-    .catch(error=>{console.log('METHOD mBot.api.setStartButton() :' + error)});
+    .catch(error=>{console.log('FUNCTION mBot.api.setStartButton() :' + error)});
 ```
 
 ## mBot.api.setGreeting({}):
@@ -1137,7 +1172,7 @@ let greeting = [
 ];
 
 mBot.api.setGreeting(greeting)
-    .catch(error=>{console.log('METHOD mBot.api.setGreeting() :' + error)});
+    .catch(error=>{console.log('FUNCTION mBot.api.setGreeting() :' + error)});
 ```
 
 ## mBot.api.readGreeting({}):
@@ -1151,7 +1186,7 @@ Read greeting message.
 ```
 mBot.api.readGreeting()
     .then(response=>{console.log('greeting: ', response)})
-    .catch(error=>{console.log('METHOD mBot.api.readGreeting() :' + error)});
+    .catch(error=>{console.log('FUNCTION mBot.api.readGreeting() :' + error)});
 ```
 
 ## mBot.api.readWhitelistedDomains({}):
@@ -1161,7 +1196,7 @@ Read Whitelisted Domains.
 ```
 mBot.api.readWhitelistedDomains()
     .then(response=>{console.log('domains: ', response)})
-    .catch(error=>{console.log('METHOD mBot.api.readWhitelistedDomains() :' + error)});
+    .catch(error=>{console.log('FUNCTION mBot.api.readWhitelistedDomains() :' + error)});
     
 ```
 
@@ -1177,7 +1212,7 @@ Add Whitelist Domain.
 const whitelistedUrl = 'https://some-url.net';
 
 mBot.api.addWhitelistDomain([whitelistedUrl])
-    .catch(error=>{console.log('METHOD mBot.api.addWhitelistDomain() :' + error)});
+    .catch(error=>{console.log('FUNCTION mBot.api.addWhitelistDomain() :' + error)});
 ```
 
 ## mBot.api.deleteWhitelistDomain({}):
@@ -1192,7 +1227,7 @@ Delete Whitelist Domain.
 const whitelistedUrl = 'https://some-url.net';
 
 mBot.api.deleteWhitelistDomain([whitelistedUrl])
-    .catch(error=>{console.log('METHOD mBot.api.deleteWhitelistDomain() :' + error)});
+    .catch(error=>{console.log('FUNCTION mBot.api.deleteWhitelistDomain() :' + error)});
 ```
 ## TESTING
 ```

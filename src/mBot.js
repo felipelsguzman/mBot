@@ -2,6 +2,7 @@
 
 const EventEmitter = require('events');
 const request = require('superagent');
+const crypto = require('crypto');
 
 // messenger api
 const messengerApi = {
@@ -778,7 +779,7 @@ const messengerApi = {
 const mBot = Object.setPrototypeOf({
     // Facebook Graph API version
     apiUrl: null,
-    // API methods object
+    // API object
     api: messengerApi,
     // verify token for webhook usage
     verifyToken: null,
@@ -917,13 +918,15 @@ const mBot = Object.setPrototypeOf({
      * @param {string} endpoint    - endpoint for webhook usage
      * @param {string} verifyToken - verifyToken for webhook usage
      * @param {string} pageToken   - facebook page access token
+     * @param {string} appSecret   - facebook application secret key
      *
      * */
     koa: function koa({
         apiVersion,
         endpoint,
         verifyToken,
-        pageToken
+        pageToken,
+        appSecret
     }) {
 
         // set api url
@@ -952,6 +955,7 @@ const mBot = Object.setPrototypeOf({
         // return koa middelware
         return async function mBotKoa(ctx, next) {
 
+            // handle webhook setup
             if (ctx.path === url && ctx.method === 'GET') {
                 if (ctx.query['hub.verify_token'] === token.verify) {
                     ctx.type = 'text/plain; charset=utf-8';
@@ -962,13 +966,34 @@ const mBot = Object.setPrototypeOf({
                 }
             }
 
+            // handle normal data from messenger
             else if (ctx.path === url && ctx.method === 'POST') {
-                //console.log(ctx.request.body.entry[0].messaging);
+
+                // check if data comes from facebook page
+
                 if (ctx.request.body.object === 'page') {
-                    let payload = ctx.request.body.entry;
-                    mBot.handlePayload(payload);
-                    ctx.type = 'text/plain; charset=utf-8';
-                    ctx.status = 200;
+
+                    let header = ctx.request.header;
+                    let xhsign = header['x-hub-signature'];
+                    let body = ctx.request.body;
+                    let payload = body.entry;
+
+                    // check signature as basic security layer
+                    await mBot.checkMessageSignature(appSecret, xhsign, body)
+                        .then(result => {
+
+                            // check valid response
+                            if (result) {
+                                mBot.handlePayload(payload);
+                                ctx.type = 'text/plain; charset=utf-8';
+                                ctx.status = 200;
+                            } else {
+                                ctx.type = 'text/plain; charset=utf-8';
+                                ctx.status = 401;
+                            }
+                        });
+
+
                 } else {
                     ctx.status = 400;
                 }
@@ -981,23 +1006,18 @@ const mBot = Object.setPrototypeOf({
      * init()
      * Allow to run mBot library stand alone
      * @param {string} apiVersion  - facebook graph api version
-     * @param {string} endpoint    - endpoint for webhook usage
      * @param {string} verifyToken - verifyToken for webhook usage
      * @param {string} pageToken   - facebook page access token
      *
      * */
     init: function init({
         apiVersion,
-        endpoint,
         verifyToken,
         pageToken
     }) {
 
         // set api url
         this.apiUrl = 'https://graph.facebook.com/' + apiVersion + '/';
-
-        // set default option for endpoint name
-        let url = endpoint === undefined ? '/messenger' : endpoint;
 
         // check for mandatory access tokens
         ((pToken, vToken)=>{
@@ -1015,6 +1035,25 @@ const mBot = Object.setPrototypeOf({
                 }
             }
         })(pageToken, verifyToken);
+    },
+    /*
+     * checkMessageSignature()
+     * Allow to check for valid signature on messages as basic security layer.
+     * Return true only if get a valid signature, otherwise will return undefined.
+     * @param {string} appSecret   - facebook application secret key
+     * @param {string} xhsign      - header x-hub-signature
+     * @param {string} body        - request body
+     *
+     * */
+    checkMessageSignature: async function checkMessageSignature(appSecret, xhsign, body) {
+
+        let hmac = crypto.createHmac('sha1', appSecret);
+        let expectedSign = 'sha1=' + hmac.update(JSON.stringify(body)).digest("hex");
+
+        if (xhsign === expectedSign) {
+            return true;
+        }
+
     }
 
 }, EventEmitter.prototype);
