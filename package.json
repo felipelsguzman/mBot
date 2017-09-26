@@ -1,6 +1,6 @@
 {
   "name": "mbot-nodejs",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Build chatbots for Facebook Messenger on top of NodeJS",
   "main": "src/mBot.js",
   "scripts": {
